@@ -375,3 +375,98 @@
 
             const logoutUserController = require('./controllers/logoutController')
             app.get('/logout', logoutUserController)
+
+4. middleware
+
+    4.1 ทำการสร้าง middleware เมื่อเข้าสู่ระบบแล้วไม่ให้ redirect ไปหน้า login, register
+
+        4.1.1 middleware -> redirectIfAuth.js
+
+            module.exports = (req, res, next) => {
+                if (req.session.userId){
+                    return res.redirect('/')
+                }
+                next()
+            }
+
+        4.1.2 แก้ไขไฟล์ index.js
+
+            // Middleware
+            const redirectIfAuth = require('./middleware/redirectIfAuth')
+
+            // เพิ่ม middleware
+            app.get('/', indexController)
+            app.get('/login', redirectIfAuth, loginController)
+            app.get('/register', redirectIfAuth, registerController)
+            app.post('/user/register', redirectIfAuth, storeUserController)
+            app.post('/user/login', redirectIfAuth, loginUserController)
+            app.get('/logout', logoutUserController)
+
+    4.2 สร้างหน้า homepage
+
+        4.2.1 views -> homePage.ejs
+
+            ทำการ copy จาก indexPage.ejs และแก้ไข
+
+            <div class="col-md-6 px-0">
+                <h1 class="display-4 fst-italic">Home Page</h1>
+                <p class="lead mb-0"><a href="#" class="text-white fw-bold">Welcome</a></p>
+            </div>
+
+        4.2.2 ทำการสร้างไฟล์ controller -> homeController.js
+
+            module.exports = (req, res) => {
+                res.render('homePage')
+            }
+
+        4.2.3 สร้าง middleware -> authMiddleware.js ถ้าไม่ login จะไม่สามารถเข้าหน้า homepage ได้
+
+            const User = require('../models/User')
+            module.exports = (req, res, next) => {
+                User.findById(req.session.userId).then((user) => {
+                    if (!user) {
+                        return res.redirect('/')
+                    }
+                    console.log('user logged in successfully')
+                    next()
+                }).catch(error => {
+                    console.log(error)
+                })
+            }
+
+        4.2.4 แก้ไขไฟล์ index.js
+
+            const homeController = require('./controllers/homeController')
+            const authMiddleware = require('./middleware/authMiddleware')
+            app.get('/home', authMiddleware, homeController)
+
+        4.2.5 แก้ไขไฟล์ loginController เมื่อมีการ login ให้ redirect ไปที่หน้า homepage แทน
+
+            const bcrypt = require('bcrypt')
+            const User = require('../models/User')
+
+            module.exports = (req, res) => {
+                const {emailinput, passwordinput} = req.body
+                console.log('helloworld')
+                console.log(emailinput)
+                console.log(passwordinput)
+
+                User.findOne({emailinput: emailinput}).then((user) =>  {
+                    console.log(user)
+
+                    if (user){
+                        console.log(passwordinput)
+                        console.log(user.passwordinput)
+                        let cmp = bcrypt.compare(passwordinput, user.passwordinput).then((match)=>{
+                            if (match){
+                                req.session.userId = user._id
+                                res.redirect('/home')
+                            } else{
+                                res.redirect('/login')
+                            }
+                        })
+                    } else{
+                        res.redirect('/login')
+                    }
+                })
+            }
