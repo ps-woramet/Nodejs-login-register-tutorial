@@ -470,3 +470,24 @@
                     }
                 })
             }
+
+5. Fetch User Data
+
+    5.1 แก้ไข controller -> homeController.js เพื่อนำค่าจากฐานข้อมูลมาแสดง
+
+        const User = require('../models/User')
+
+        module.exports = async (req, res) => {
+            let UserData = await User.findById(req.session.userId)
+            res.render('homePage', {
+                UserData
+            })
+        }
+
+    5.2 views -> homePage.ejs ทำการแสดง id และ email จากฐานข้อมูล
+
+        <div class="col-md-6 px-0">
+            <h1 class="display-4 fst-italic">Home Page</h1>
+            <h3>User ID <%= UserData._id %></h3>
+            <p class="lead mb-0"><a href="#" class="text-white fw-bold">Welcome, <%= UserData.emailinput %></a></p>
+        </div>
