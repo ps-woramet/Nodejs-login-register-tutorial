@@ -303,7 +303,75 @@
     2.8 ข้อมูลจากการสมัครสมาชิกจะถูกเก็บไว้ในฐานข้อมูล
         Database -> Browse Collections -> users
 
+3. Login & Logout System
 
+    3.1 Login
 
+        3.1.1 ทำการสร้างไฟล์ controller -> loginUserController.js เพื่อทำการเปรียบเทียบชื่อผู้ใช้ และ password
 
+            const bcrypt = require('bcrypt')
+            const User = require('../models/User')
 
+            module.exports = (req, res) => {
+
+                // รับค่ามาจากหน้าเว็บไซต์
+                const {emailinput, passwordinput} = req.body
+
+                // เทียบค่ากับฐานข้อมูล
+                User.findOne({emailinput: emailinput}).then((user) =>  {
+                    console.log(user)
+
+                    if (user){
+                        let cmp = bcrypt.compare(passwordinput, user.passwordinput).then((match)=>{
+                            if (match){
+                                req.session.userId = user._id
+                                res.redirect('/')
+                            } else{
+                                res.redirect('/login')
+                            }
+                        })
+                    } else{
+                        res.redirect('/login')
+                    }
+                })
+            }
+
+        3.1.2 ทำการสร้าง route ที่ index.js
+
+            const loginUserController = require('./controllers/loginUserController')
+            app.post('/user/login', loginUserController)
+
+        3.1.3 ทำการเก็บ session ที่ index.js
+
+            global.loggedIn = null
+
+            app.use("*", (req, res, next) =>{
+                loggedIn = req.session.userId
+                next()
+            })
+
+        3.1.4 ทำการแก้ไข indexPage.ejs เมื่อมีการเข้าสู่ระบบให้มีปุ่ม Logout
+
+            <% if (loggedIn) { %>
+            <a class="btn btn-sm btn-danger" href="/logout">Logout</a>
+            <% } %>
+
+            <% if (!loggedIn) { %>
+            <a class="btn btn-sm btn-outline-secondary mx-3" href="/login">Sign In</a>
+            <a class="btn btn-sm btn-success" href="/register">Sign Up</a>
+            <% } %>
+
+    3.2 Logout
+
+        3.2.1  ทำการสร้างไฟล์ controller -> logoutUserController.js เพื่อทำการทำลาย session
+
+            module.exports = (req, res) => {
+                req.session.destroy(() => {
+                    res.redirect('/')
+                })
+            }
+
+        3.2.2 ทำการสร้าง route ที่ index.js
+
+            const logoutUserController = require('./controllers/logoutController')
+            app.get('/logout', logoutUserController)
